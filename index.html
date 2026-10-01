@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Email & Landing Page QC Auditor - v4.0</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            navy: {
+              800: '#1C3564',
+              900: '#0F1D38',
+            },
+            crimson: {
+              600: '#C8102E',
+              700: '#A00D24',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+  <!-- Header -->
+  <header class="bg-navy-900 border-b border-slate-800 text-white shadow-lg sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-lg bg-crimson-600 flex items-center justify-center font-bold text-white tracking-wider shadow-inner">
+          QC
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-lg font-bold tracking-tight text-white">StudyIn Campaign QC Sentinel</h1>
+            <span class="px-2 py-0.5 text-xs font-semibold rounded bg-crimson-600/30 text-crimson-400 border border-crimson-500/40">v4.0 (Enterprise Live)</span>
+          </div>
+          <p class="text-xs text-slate-400">Strict Allowlist • Rogue Asset Sentinel • Dual Email Inspector</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <!-- Preset Selector -->
+        <div class="flex items-center bg-slate-800/80 rounded-lg p-1 border border-slate-700">
+          <label for="presetSelector" class="text-xs text-slate-400 px-2 font-medium">Preset:</label>
+          <select id="presetSelector" onchange="loadSelectedPreset()" class="bg-slate-900 text-xs text-slate-200 border-none rounded py-1 px-2.5 focus:ring-1 focus:ring-crimson-600 outline-none">
+            <option value="nigeria">Nigeria (Lagos)</option>
+            <option value="ghana">Ghana (Accra)</option>
+            <option value="kenya">Kenya (Nairobi)</option>
+            <option value="custom">Custom Template</option>
+          </select>
+        </div>
+
+        <button onclick="exportReportCSV()" id="exportBtn" class="hidden text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium py-1.5 px-3 rounded-lg border border-slate-700 transition flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.5L19 7.5V19a2 2 0 01-2 2z"/></svg>
+          Export CSV
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6">
+
+    <!-- KPI Dashboard Summary -->
+    <div id="metricsBar" class="grid grid-cols-2 sm:grid-cols-5 gap-3.5">
+      <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm flex flex-col">
+        <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Audited</span>
+        <span id="metricTotal" class="text-2xl font-black text-slate-800 mt-1">0</span>
+      </div>
+      <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm flex flex-col">
+        <span class="text-xs font-semibold uppercase tracking-wider text-emerald-600">Passed</span>
+        <span id="metricPassed" class="text-2xl font-black text-emerald-600 mt-1">0</span>
+      </div>
+      <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm flex flex-col">
+        <span class="text-xs font-semibold uppercase tracking-wider text-amber-600">Warnings / Tokens</span>
+        <span id="metricWarnings" class="text-2xl font-black text-amber-600 mt-1">0</span>
+      </div>
+      <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm flex flex-col">
+        <span class="text-xs font-semibold uppercase tracking-wider text-rose-600">Failed</span>
+        <span id="metricFailed" class="text-2xl font-black text-rose-600 mt-1">0</span>
+      </div>
+      <div class="bg-white p-3.5 rounded-xl border border-rose-200 bg-rose-50/40 shadow-sm flex flex-col">
+        <span class="text-xs font-semibold uppercase tracking-wider text-rose-700 flex items-center gap-1">
+          <span class="w-2 h-2 rounded-full bg-rose-600 animate-pulse"></span>
+          Rogue Items
+        </span>
+        <span id="metricRogue" class="text-2xl font-black text-rose-700 mt-1">0</span>
+      </div>
+    </div>
+
+    <!-- Configuration & Input Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+      <!-- Left: Approved Reference Criteria (Strict Allowlist) -->
+      <section class="lg:col-span-5 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div>
+            <h2 class="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+              <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              Strict Campaign Allowlist
+            </h2>
+            <p class="text-xs text-slate-500 mt-0.5">Assets not listed here will be flagged as Rogue.</p>
+          </div>
+          <button onclick="saveCurrentAsPreset()" class="text-xs font-semibold text-crimson-600 hover:text-crimson-700 transition">Save Preset</button>
+        </div>
+
+        <div class="space-y-3.5 text-xs">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Target Email (Checks Display & Mailto)</label>
+            <input type="email" id="targetEmail" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-1 focus:ring-crimson-600 outline-none mono" value="lagos@gostudyin.com">
+          </div>
+
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Target Phone (Strict Matching)</label>
+            <input type="text" id="targetPhone" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-1 focus:ring-crimson-600 outline-none mono" value="+234 8109124550">
+          </div>
+
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Office Address Snippet</label>
+            <textarea id="targetAddress" rows="2" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-1 focus:ring-crimson-600 outline-none">2 Ahmed Onibudo St, Victoria Island 106104 Lagos , Nigeria</textarea>
+          </div>
+
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Mandatory CTA & Landing Links (One per line)</label>
+            <textarea id="targetCtas" rows="2" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-1 focus:ring-crimson-600 outline-none mono text-[11px]">https://gostudyin.com/nigeria/
+https://gostudyin.com/nigeria/free-consultation/</textarea>
+          </div>
+
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Approved Social Profiles (One per line)</label>
+            <textarea id="targetSocials" rows="5" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-1 focus:ring-crimson-600 outline-none mono text-[11px]">https://www.instagram.com/ng_studyin
+https://www.facebook.com/NG.StudyIn
+https://www.youtube.com/@nigeria.StudyIn
+https://www.tiktok.com/@nigeria.studyin
+https://www.linkedin.com/company/studyin-global/posts/?feedView=all</textarea>
+          </div>
+
+          <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+            <span>Images (`&lt;img&gt;`) & "View in browser" links are automatically safe.</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right: Target Input (URLs or Direct HTML) -->
+      <section class="lg:col-span-7 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col space-y-4">
+        
+        <!-- Tab Navigation -->
+        <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+          <div class="flex items-center space-x-2">
+            <button id="tabUrls" onclick="switchInputTab('urls')" class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition bg-slate-900 text-white shadow-sm">
+              Batch URLs (Live & Proxy)
+            </button>
+            <button id="tabHtml" onclick="switchInputTab('html')" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+              Direct HTML Source (CORS Bypass)
+            </button>
+          </div>
+          <div class="flex items-center space-x-2">
+            <label class="inline-flex items-center cursor-pointer text-xs text-slate-600" title="Prevents old cached HTML from being audited">
+              <input type="checkbox" id="cacheBusterToggle" checked class="rounded border-slate-300 text-crimson-600 focus:ring-crimson-600 mr-1.5">
+              <span>Cache Buster</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- URL Input View -->
+        <div id="urlInputContainer" class="flex-1 flex flex-col space-y-3">
+          <div class="flex items-center justify-between">
+            <label class="text-xs font-semibold text-slate-700">Preview / Webmail URLs to Audit (One per line)</label>
+            <span id="urlCountBadge" class="text-[11px] font-mono text-slate-400">1 URL queued</span>
+          </div>
+          <textarea id="batchUrls" rows="9" oninput="updateUrlCounter()" class="w-full flex-1 p-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-crimson-600/20 focus:border-crimson-600 outline-none mono text-xs leading-relaxed" placeholder="Paste your HubSpot email preview URLs here...">https://webmail.gostudyin.com/nigeria/last-call-franchise-expansion-nigeria?hs_preview=TfUbpqcx-482451460308</textarea>
+          
+          <div class="bg-amber-50 border border-amber-200/80 rounded-xl p-3 text-xs text-amber-800 space-y-1">
+            <div class="font-semibold flex items-center gap-1.5 text-amber-900">
+              <svg class="w-4 h-4 text-amber-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              Note on Private HubSpot Webmail Previews (CORS)
+            </div>
+            <p class="text-[11px] leading-normal text-amber-700">
+              If HubSpot prevents your browser from fetching directly, switch to the <strong>"Direct HTML Source"</strong> tab, press <kbd class="px-1 py-0.5 bg-white border border-amber-300 rounded font-mono">Ctrl+U</kbd> on the page, and paste the code.
+            </p>
+          </div>
+        </div>
+
+        <!-- Direct HTML Input View -->
+        <div id="htmlInputContainer" class="hidden flex-1 flex flex-col space-y-3">
+          <div class="flex items-center justify-between">
+            <label class="text-xs font-semibold text-slate-700">Paste Rendered HTML Source</label>
+            <span class="text-[11px] font-mono text-slate-400">Instant client inspection</span>
+          </div>
+          <textarea id="rawHtmlInput" rows="12" class="w-full flex-1 p-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-crimson-600/20 focus:border-crimson-600 outline-none mono text-xs leading-relaxed" placeholder="Right-click preview page -> View Page Source (Ctrl+U) -> Copy and paste here..."></textarea>
+          <input type="text" id="htmlCustomLabel" placeholder="Optional Page Identifier / Label (e.g. Lagos Intake Batch 1)" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs outline-none focus:bg-white">
+        </div>
+
+        <!-- Action Bar -->
+        <div class="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
+          <div class="flex items-center gap-2">
+            <button onclick="clearResultsOnly()" class="px-3.5 py-2 text-xs font-medium text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition border border-slate-200">
+              Clear Results Only
+            </button>
+            <button onclick="resetAllInputs()" class="px-3.5 py-2 text-xs font-medium text-rose-600 hover:bg-rose-50 rounded-lg transition border border-rose-200">
+              Reset All
+            </button>
+          </div>
+
+          <button onclick="triggerAudit()" id="runAuditBtn" class="px-6 py-2.5 bg-crimson-600 hover:bg-crimson-700 active:scale-[0.98] text-white text-xs font-bold rounded-xl shadow-md transition flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+            <span>Run Quality Inspection</span>
+          </button>
+        </div>
+
+      </section>
+    </div>
+
+    <!-- Inspection Results Stream -->
+    <section class="space-y-4">
+      <div class="flex items-center justify-between">
+        <h2 class="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+          <span>Audit Log & Discrepancies</span>
+          <span id="activeAuditStatus" class="hidden text-xs font-normal text-slate-400">Inspecting...</span>
+        </h2>
+        <div class="text-xs text-slate-400">Strict mode evaluates both display copy and link destination</div>
+      </div>
+
+      <!-- Result Cards Container -->
+      <div id="resultsStream" class="space-y-4">
+        <!-- Placeholder Empty State -->
+        <div id="emptyState" class="bg-white border-2 border-dashed border-slate-200 rounded-2xl p-12 text-center space-y-2">
+          <div class="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto text-slate-400">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+          </div>
+          <h3 class="text-sm font-bold text-slate-700">No Audits Run Yet</h3>
+          <p class="text-xs text-slate-400 max-w-sm mx-auto">Click "Run Quality Inspection" above to audit your queued HubSpot email preview links against the approved allowlist.</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="bg-white border-t border-slate-200 py-4 mt-8">
+    <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-400">
+      StudyIn Automated Campaign Quality Assurance Sentinel • Production Version 4.0
+    </div>
+  </footer>
+
+  <!-- SCRIPT LOGIC -->
+  <script>
+    // Standard System & Legal Utility Links (Always Approved)
+    const STANDARD_UTILITY_ALLOWLIST = [
+      'gostudyin.com/privacy-policy',
+      'gostudyin.com/anti-bribery',
+      'gostudyin.com/code-of-conduct',
+      'gostudyin.com/whistle-blower',
+      'preferences-center',
+      'hs/preferences-center',
+      'hs_preview',
+      'view-in-browser',
+      'webmail.gostudyin.com'
+    ];
+
+    // Presets Storage
+    const PRESETS = {
+      nigeria: {
+        email: 'lagos@gostudyin.com',
+        phone: '+234 8109124550',
+        address: '2 Ahmed Onibudo St, Victoria Island 106104 Lagos , Nigeria',
+        ctas: ['https://gostudyin.com/nigeria/', 'https://gostudyin.com/nigeria/free-consultation/'],
+        socials: [
+          'https://www.instagram.com/ng_studyin',
+          'https://www.facebook.com/NG.StudyIn',
+          'https://www.youtube.com/@nigeria.StudyIn',
+          'https://www.tiktok.com/@nigeria.studyin',
+          'https://www.linkedin.com/company/studyin-global/posts/?feedView=all'
+        ]
+      },
+      ghana: {
+        email: 'accra@gostudyin.com',
+        phone: '+233 551234567',
+        address: 'Airport Residential Area, Accra, Ghana',
+        ctas: ['https://gostudyin.com/ghana/', 'https://gostudyin.com/ghana/free-consultation/'],
+        socials: [
+          'https://www.instagram.com/gh_studyin',
+          'https://www.facebook.com/GH.StudyIn',
+          'https://www.linkedin.com/company/studyin-global/posts/?feedView=all'
+        ]
+      },
+      kenya: {
+        email: 'nairobi@gostudyin.com',
+        phone: '+254 712345678',
+        address: 'Westlands, Nairobi, Kenya',
+        ctas: ['https://gostudyin.com/kenya/', 'https://gostudyin.com/kenya/free-consultation/'],
+        socials: [
+          'https://www.instagram.com/ke_studyin',
+          'https://www.facebook.com/KE.StudyIn',
+          'https://www.linkedin.com/company/studyin-global/posts/?feedView=all'
+        ]
+      }
+    };
+
+    let activeInputTab = 'urls';
+    let auditRecords = [];
+
+    // Helper: Normalize clean phone digits
+    function extractDigits(str) {
+      return (str || '').replace(/\D/g, '');
+    }
+
+    // Helper: Normalize URL
+    function normalizeUrl(url) {
+      if (!url) return '';
+      return url.trim().toLowerCase().replace(/\/+$/, '');
+    }
+
+    // Helper: Check if link is an image asset
+    function isImageUrl(url) {
+      if (!url) return false;
+      const clean = url.trim().toLowerCase();
+      const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.ico', '.bmp', '.tiff', '.avif'];
+      if (imageExtensions.some(ext => clean.includes(ext))) return true;
+      if (clean.includes('/hs-fs/hubfs/') || clean.includes('/hubfs/')) return true;
+      if (clean.startsWith('data:image/')) return true;
+      return false;
+    }
+
+    // Helper: Check if link is "View in browser"
+    function isViewInBrowserLink(href, text) {
+      const lowerHref = (href || '').toLowerCase();
+      const lowerText = (text || '').toLowerCase().trim();
+      
+      const textMatches = ['view in browser', 'view online', 'web version', 'open in browser'];
+      if (textMatches.some(t => lowerText.includes(t))) return true;
+
+      if (lowerHref.includes('hs_preview') || lowerHref.includes('/view/') || lowerHref.includes('email/preview')) {
+        return true;
+      }
+      return false;
+    }
+
+    // Tab Switching
+    function switchInputTab(tab) {
+      activeInputTab = tab;
+      const urlBtn = document.getElementById('tabUrls');
+      const htmlBtn = document.getElementById('tabHtml');
+      const urlBox = document.getElementById('urlInputContainer');
+      const htmlBox = document.getElementById('htmlInputContainer');
+
+      if (tab === 'urls') {
+        urlBtn.className = 'px-3.5 py-1.5 rounded-lg text-xs font-bold transition bg-slate-900 text-white shadow-sm';
+        htmlBtn.className = 'px-3.5 py-1.5 rounded-lg text-xs font-semibold transition text-slate-600 hover:text-slate-900 hover:bg-slate-100';
+        urlBox.classList.remove('hidden');
+        htmlBox.classList.add('hidden');
+      } else {
+        htmlBtn.className = 'px-3.5 py-1.5 rounded-lg text-xs font-bold transition bg-slate-900 text-white shadow-sm';
+        urlBtn.className = 'px-3.5 py-1.5 rounded-lg text-xs font-semibold transition text-slate-600 hover:text-slate-900 hover:bg-slate-100';
+        htmlBox.classList.remove('hidden');
+        urlBox.classList.add('hidden');
+      }
+    }
+
+    function updateUrlCounter() {
+      const urls = document.getElementById('batchUrls').value.trim().split('\n').filter(u => u.trim().length > 0);
+      document.getElementById('urlCountBadge').textContent = `${urls.length} URL${urls.length === 1 ? '' : 's'} queued`;
+    }
+
+    // Presets Loading
+    function loadSelectedPreset() {
+      const val = document.getElementById('presetSelector').value;
+      if (PRESETS[val]) {
+        const p = PRESETS[val];
+        document.getElementById('targetEmail').value = p.email;
+        document.getElementById('targetPhone').value = p.phone;
+        document.getElementById('targetAddress').value = p.address;
+        document.getElementById('targetCtas').value = p.ctas.join('\n');
+        document.getElementById('targetSocials').value = p.socials.join('\n');
+      }
+    }
+
+    function saveCurrentAsPreset() {
+      const name = prompt('Enter a label for this custom preset:', 'Custom Region');
+      if (!name) return;
+      const customData = {
+        email: document.getElementById('targetEmail').value.trim(),
+        phone: document.getElementById('targetPhone').value.trim(),
+        address: document.getElementById('targetAddress').value.trim(),
+        ctas: document.getElementById('targetCtas').value.trim().split('\n').filter(Boolean),
+        socials: document.getElementById('targetSocials').value.trim().split('\n').filter(Boolean)
+      };
+      localStorage.setItem('studyin_qc_' + name, JSON.stringify(customData));
+      alert(`Preset "${name}" saved to your browser storage!`);
+    }
+
+    // Reset Functions
+    function clearResultsOnly() {
+      auditRecords = [];
+      document.getElementById('resultsStream').innerHTML = `
+        <div id="emptyState" class="bg-white border-2 border-dashed border-slate-200 rounded-2xl p-12 text-center space-y-2">
+          <div class="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto text-slate-400">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+          </div>
+          <h3 class="text-sm font-bold text-slate-700">Results Cleared</h3>
+          <p class="text-xs text-slate-400 max-w-sm mx-auto">Your input URLs are still intact. Click "Run Quality Inspection" whenever you're ready.</p>
+        </div>
+      `;
+      updateMetrics(0, 0, 0, 0, 0);
+      document.getElementById('exportBtn').classList.add('hidden');
+    }
+
+    function resetAllInputs() {
+      if (!confirm('Reset both results and inputs?')) return;
+      clearResultsOnly();
+      document.getElementById('batchUrls').value = '';
+      document.getElementById('rawHtmlInput').value = '';
+      document.getElementById('htmlCustomLabel').value = '';
+      updateUrlCounter();
+    }
+
+    function updateMetrics(total, passed, warnings, failed, rogue) {
+      document.getElementById('metricTotal').textContent = total;
+      document.getElementById('metricPassed').textContent = passed;
+      document.getElementById('metricWarnings').textContent = warnings;
+      document.getElementById('metricFailed').textContent = failed;
+      document.getElementById('metricRogue').textContent = rogue;
+    }
+
+    // AUDIT CONTROLLER
+    async function triggerAudit() {
+      const btn = document.getElementById('runAuditBtn');
+      btn.disabled = true;
+      btn.classList.add('opacity-50', 'cursor-not-allowed');
+
+      const expected = {
+        email: document.getElementById('targetEmail').value.trim().toLowerCase(),
+        phoneRaw: document.getElementById('targetPhone').value.trim(),
+        phoneDigits: extractDigits(document.getElementById('targetPhone').value),
+        addressSnippet: document.getElementById('targetAddress').value.trim().toLowerCase(),
+        ctas: document.getElementById('targetCtas').value.trim().split('\n').map(normalizeUrl).filter(Boolean),
+        socials: document.getElementById('targetSocials').value.trim().split('\n').map(normalizeUrl).filter(Boolean)
+      };
+
+      auditRecords = [];
+      const stream = document.getElementById('resultsStream');
+      stream.innerHTML = '';
+
+      if (activeInputTab === 'urls') {
+        const rawUrls = document.getElementById('batchUrls').value.trim().split('\n').filter(u => u.trim().length > 0);
+        if (rawUrls.length === 0) {
+          alert('Please enter at least one URL to audit.');
+          btn.disabled = false;
+          btn.classList.remove('opacity-50', 'cursor-not-allowed');
+          return;
+        }
+
+        const useCacheBuster = document.getElementById('cacheBusterToggle').checked;
+
+        for (let i = 0; i < rawUrls.length; i++) {
+          let url = rawUrls[i].trim();
+          let fetchTarget = url;
+          if (useCacheBuster) {
+            const sep = url.includes('?') ? '&' : '?';
+            fetchTarget = `${url}${sep}_qc_nocache=${Date.now()}`;
+          }
+
+          appendProgressCard(stream, url, i);
+          const result = await auditSingleUrl(fetchTarget, url, expected);
+          replaceCardWithResult(stream, i, result);
+          auditRecords.push(result);
+        }
+      } else {
+        const rawHtml = document.getElementById('rawHtmlInput').value.trim();
+        if (!rawHtml) {
+          alert('Please paste raw HTML source code to audit.');
+          btn.disabled = false;
+          btn.classList.remove('opacity-50', 'cursor-not-allowed');
+          return;
+        }
+        const label = document.getElementById('htmlCustomLabel').value.trim() || 'Direct HTML Source Batch';
+        appendProgressCard(stream, label, 0);
+        const result = auditHtmlSource(rawHtml, label, expected);
+        replaceCardWithResult(stream, 0, result);
+        auditRecords.push(result);
+      }
+
+      computeOverallMetrics();
+      document.getElementById('exportBtn').classList.remove('hidden');
+
+      btn.disabled = false;
+      btn.classList.remove('opacity-50', 'cursor-not-allowed');
+    }
+
+    function appendProgressCard(container, identifier, idx) {
+      const card = document.createElement('div');
+      card.id = `audit-card-${idx}`;
+      card.className = 'bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between animate-pulse';
+      card.innerHTML = `
+        <div class="flex items-center space-x-3">
+          <div class="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400">
+            <svg class="w-4 h-4 animate-spin text-crimson-600" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
+          </div>
+          <div>
+            <div class="text-xs font-bold text-slate-700 mono truncate max-w-md">${identifier}</div>
+            <div class="text-[11px] text-slate-400">Connecting and analyzing document DOM...</div>
+          </div>
+        </div>
+      `;
+      container.appendChild(card);
+    }
+
+    async function auditSingleUrl(fetchUrl, displayUrl, expected) {
+      let htmlText = '';
+      let fetchError = null;
+
+      try {
+        const res = await fetch(fetchUrl);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        htmlText = await res.text();
+      } catch (err) {
+        // Fallback to CORS proxy
+        try {
+          const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(fetchUrl)}`;
+          const proxyRes = await fetch(proxyUrl);
+          if (!proxyRes.ok) throw new Error(`Proxy HTTP ${proxyRes.status}`);
+          htmlText = await proxyRes.text();
+        } catch (proxyErr) {
+          fetchError = `CORS / Network Access Denied: Browser blocked direct fetch from webmail.gostudyin.com. Solution: Open link in tab -> Ctrl+U -> Paste into 'Direct HTML Source' tab.`;
+        }
+      }
+
+      if (fetchError) {
+        return {
+          identifier: displayUrl,
+          status: 'CORS_ERROR',
+          errorMsg: fetchError,
+          checks: [],
+          rogueItems: []
+        };
+      }
+
+      return auditHtmlSource(htmlText, displayUrl, expected);
+    }
+
+    // CORE AUDITOR ENGINE
+    function auditHtmlSource(html, identifier, expected) {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+      const bodyText = doc.body ? doc.body.textContent : '';
+      const lowerBodyText = bodyText.toLowerCase();
+
+      const checks = [];
+      const rogueItems = [];
+      let ignoredImagesCount = 0;
+
+      // 1. DUAL EMAIL INSPECTION (Display text vs Mailto href)
+      const emailLinks = Array.from(doc.querySelectorAll('a[href^="mailto:"], a'));
+      const foundEmails = new Set();
+      let matchedTargetEmail = false;
+      let emailDisplayMismatch = false;
+
+      emailLinks.forEach(a => {
+        const href = (a.getAttribute('href') || '').trim();
+        const text = a.textContent.trim().toLowerCase();
+
+        if (href.toLowerCase().startsWith('mailto:')) {
+          const rawTarget = href.replace(/^mailto:/i, '').split('?')[0].replace(/^\/\//, '').trim().toLowerCase();
+          if (rawTarget) foundEmails.add(rawTarget);
+
+          if (rawTarget === expected.email) {
+            matchedTargetEmail = true;
+            if (!text.includes(expected.email) && text.length > 0 && !a.querySelector('img')) {
+              // Informational: Text might be "Contact Us" or button text
+            }
+          } else {
+            rogueItems.push({
+              type: 'Rogue Email in Mailto Link',
+              value: rawTarget,
+              context: `Link text: "${a.textContent.trim()}"`
+            });
+          }
+        }
+
+        // Also check if display text looks like an email
+        if (text.includes('@') && text.includes('.')) {
+          const extractedTextEmail = text.match(/[\w.-]+@[\w.-]+\.[a-zA-Z]{2,}/);
+          if (extractedTextEmail) {
+            const dispEmail = extractedTextEmail[0].toLowerCase();
+            foundEmails.add(dispEmail);
+            if (dispEmail === expected.email) {
+              if (href.toLowerCase().startsWith('mailto:') && !href.toLowerCase().includes(expected.email)) {
+                emailDisplayMismatch = true;
+                rogueItems.push({
+                  type: 'Email Display vs Link Mismatch',
+                  value: `Text shows "${expected.email}" but link points to "${href}"`,
+                  context: 'Critical user misdirection'
+                });
+              }
+            } else {
+              rogueItems.push({
+                type: 'Rogue Email in Display Text',
+                value: dispEmail,
+                context: `Visible text on page`
+              });
+            }
+          }
+        }
+      });
+
+      if (matchedTargetEmail && !emailDisplayMismatch) {
+        checks.push({
+          category: 'Target Email',
+          status: 'PASS',
+          title: `Email matches: ${expected.email}`,
+          details: `Verified mailto: target routing directly to ${expected.email}`
+        });
+      } else if (emailDisplayMismatch) {
+        checks.push({
+          category: 'Target Email',
+          status: 'FAIL',
+          title: `Email Destination Mismatch`,
+          details: `Display text states ${expected.email} but underlying link directs to another address!`
+        });
+      } else {
+        checks.push({
+          category: 'Target Email',
+          status: 'FAIL',
+          title: `Expected email ${expected.email} not found in mailto links`,
+          details: `Found other addresses: ${Array.from(foundEmails).join(', ') || 'None'}`
+        });
+      }
+
+      // 2. PHONE NUMBER & TEL LINK INSPECTION
+      const cleanDigitsBody = extractDigits(bodyText);
+      const telLinks = Array.from(doc.querySelectorAll('a[href^="tel:"], a[href*="about:invalid"]'));
+      let phoneTextFound = cleanDigitsBody.includes(expected.phoneDigits);
+      let brokenPhoneLinkFound = false;
+
+      // Check all links for broken phone link scheme (HubSpot sanitize bug)
+      Array.from(doc.querySelectorAll('a')).forEach(a => {
+        const href = a.getAttribute('href') || '';
+        const text = a.textContent;
+        if (href.includes('about:invalid') && (text.includes('+') || extractDigits(text).length >= 7)) {
+          brokenPhoneLinkFound = true;
+          checks.push({
+            category: 'Phone Dialer Link',
+            status: 'FAIL',
+            title: 'Broken Phone Protocol Link Detected',
+            details: `Phone link href is set to "${href}" (causes browser dead link instead of dialing ${expected.phoneRaw})`
+          });
+        }
+      });
+
+      if (phoneTextFound) {
+        checks.push({
+          category: 'Phone Number Text',
+          status: 'PASS',
+          title: `Phone digits verified: ${expected.phoneRaw}`,
+          details: `Normalized digit sequence (${expected.phoneDigits}) present in body text.`
+        });
+      } else {
+        checks.push({
+          category: 'Phone Number Text',
+          status: 'FAIL',
+          title: `Missing expected phone: ${expected.phoneRaw}`,
+          details: `The exact digits (${expected.phoneDigits}) could not be found in rendered page text.`
+        });
+      }
+
+      // 3. ADDRESS INSPECTION
+      if (lowerBodyText.includes(expected.addressSnippet)) {
+        checks.push({
+          category: 'Office Address',
+          status: 'PASS',
+          title: 'Office address verified',
+          details: `Matched expected address snippet: "${expected.addressSnippet}"`
+        });
+      } else {
+        checks.push({
+          category: 'Office Address',
+          status: 'FAIL',
+          title: 'Office address missing or altered',
+          details: `Expected address snippet "${expected.addressSnippet}" was not found.`
+        });
+      }
+
+      // 4. STRICT HYPERLINK & ROGUE LINK AUDITOR
+      const allAnchors = Array.from(doc.querySelectorAll('a[href]'));
+      const approvedUrls = new Set([...expected.ctas, ...expected.socials].map(normalizeUrl));
+      
+      const foundPageLinks = new Set();
+      const matchedCtas = new Set();
+      const matchedSocials = new Set();
+
+      allAnchors.forEach(a => {
+        const rawHref = (a.getAttribute('href') || '').trim();
+        const norm = normalizeUrl(rawHref);
+        const linkText = (a.textContent || '').trim();
+
+        if (!norm || norm.startsWith('#') || norm.startsWith('javascript:')) return;
+
+        // Skip image links completely
+        if (isImageUrl(rawHref)) {
+          ignoredImagesCount++;
+          return;
+        }
+
+        // Exempt "View in browser" / Webmail preview links
+        if (isViewInBrowserLink(rawHref, linkText)) {
+          return;
+        }
+
+        // Check if it matches CTA
+        expected.ctas.forEach(c => {
+          if (norm.includes(c) || c.includes(norm)) matchedCtas.add(c);
+        });
+
+        // Check if it matches Social
+        expected.socials.forEach(s => {
+          if (norm.includes(s) || s.includes(norm)) matchedSocials.add(s);
+        });
+
+        // Test against Allowlist
+        const isApprovedCtaOrSocial = Array.from(approvedUrls).some(app => norm.includes(app) || app.includes(norm));
+        const isStandardUtility = STANDARD_UTILITY_ALLOWLIST.some(util => norm.includes(util));
+        const isMailto = norm.startsWith('mailto:');
+        const isTel = norm.startsWith('tel:') || norm.includes('about:invalid');
+
+        if (!isApprovedCtaOrSocial && !isStandardUtility && !isMailto && !isTel) {
+          rogueItems.push({
+            type: 'Unapproved / Rogue Link',
+            value: rawHref,
+            context: `Anchor Text: "${linkText || '[Icon/Image Wrap]'}"`
+          });
+        }
+      });
+
+      // Report CTA Status
+      expected.ctas.forEach(c => {
+        if (matchedCtas.has(c)) {
+          checks.push({
+            category: 'Required CTA Link',
+            status: 'PASS',
+            title: `Matched CTA: ${c}`,
+            details: 'Target destination link verified in document anchor elements.'
+          });
+        } else {
+          checks.push({
+            category: 'Required CTA Link',
+            status: 'FAIL',
+            title: `Missing CTA: ${c}`,
+            details: 'The required consultation or regional landing CTA was not found in clickable links.'
+          });
+        }
+      });
+
+      // Report Social Status
+      expected.socials.forEach(s => {
+        if (matchedSocials.has(s)) {
+          checks.push({
+            category: 'Social Channel',
+            status: 'PASS',
+            title: `Verified channel: ${s}`,
+            details: 'Approved social link found.'
+          });
+        } else {
+          checks.push({
+            category: 'Social Channel',
+            status: 'FAIL',
+            title: `Missing social profile: ${s}`,
+            details: 'This approved campaign social profile was absent in page markup.'
+          });
+        }
+      });
+
+      // 5. ANOMALY & PERSONALIZATION TOKEN SENTINEL
+      const anomalies = [];
+      if (bodyText.includes('Dear  ,')) anomalies.push('Empty recipient name token ("Dear  ,")');
+      if (bodyText.includes('Student ID: Student ID')) anomalies.push('Unrendered Student ID placeholder token');
+      if (bodyText.includes('{{') || bodyText.includes('}}')) anomalies.push('Raw uncompiled handlebars ({{ ... }}) token left in body');
+
+      if (anomalies.length > 0) {
+        checks.push({
+          category: 'Token Personalization',
+          status: 'WARNING',
+          title: `${anomalies.length} Token Anomaly Detected`,
+          details: anomalies.join(' • ')
+        });
+      } else {
+        checks.push({
+          category: 'Token Personalization',
+          status: 'PASS',
+          title: 'Clean token render',
+          details: 'No empty salutations or unparsed {{ handlebars }} observed.'
+        });
+      }
+
+      // Check Overall Status
+      const hasFails = checks.some(c => c.status === 'FAIL');
+      const hasWarnings = checks.some(c => c.status === 'WARNING');
+      const hasRogue = rogueItems.length > 0;
+
+      let finalStatus = 'PASS';
+      if (hasFails || hasRogue) finalStatus = 'FAIL';
+      else if (hasWarnings) finalStatus = 'WARNING';
+
+      return {
+        identifier,
+        status: finalStatus,
+        checks,
+        rogueItems,
+        ignoredImagesCount
+      };
+    }
+
+    // RENDER AUDIT CARD RESULT
+    function replaceCardWithResult(container, idx, result) {
+      const card = document.getElementById(`audit-card-${idx}`);
+      if (!card) return;
+
+      if (result.status === 'CORS_ERROR') {
+        card.className = 'bg-rose-50/60 p-5 rounded-2xl border border-rose-200 shadow-sm space-y-3';
+        card.innerHTML = `
+          <div class="flex items-start justify-between">
+            <div class="space-y-1">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-xs font-bold rounded bg-rose-600 text-white uppercase">CORS Blocked</span>
+                <span class="text-xs font-bold text-slate-800 mono">${result.identifier}</span>
+              </div>
+              <p class="text-xs text-rose-700 leading-relaxed">${result.errorMsg}</p>
+            </div>
+            <button onclick="switchInputTab('html')" class="shrink-0 text-xs bg-rose-600 hover:bg-rose-700 text-white font-semibold py-1.5 px-3 rounded-lg shadow-sm">
+              Use Direct HTML Paste
+            </button>
+          </div>
+        `;
+        return;
+      }
+
+      const passCount = result.checks.filter(c => c.status === 'PASS').length;
+      const failCount = result.checks.filter(c => c.status === 'FAIL').length;
+      const warnCount = result.checks.filter(c => c.status === 'WARNING').length;
+      const rogueCount = result.rogueItems.length;
+
+      let badgeBg = 'bg-emerald-600';
+      let badgeText = 'AUDIT PASSED';
+      let borderCol = 'border-slate-200';
+
+      if (result.status === 'FAIL') {
+        badgeBg = 'bg-rose-600';
+        badgeText = 'FAILED';
+        borderCol = 'border-rose-200';
+      } else if (result.status === 'WARNING') {
+        badgeBg = 'bg-amber-600';
+        badgeText = 'WARNINGS FOUND';
+        borderCol = 'border-amber-200';
+      }
+
+      card.className = `bg-white p-5 rounded-2xl border ${borderCol} shadow-sm space-y-4`;
+      card.innerHTML = `
+        <div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100">
+          <div class="flex items-center space-x-2.5">
+            <span class="px-2.5 py-1 text-xs font-black rounded-lg ${badgeBg} text-white uppercase tracking-wider">${badgeText}</span>
+            <div class="text-xs font-bold text-slate-800 mono truncate max-w-lg" title="${result.identifier}">${result.identifier}</div>
+          </div>
+          <div class="flex items-center gap-2 text-xs font-semibold">
+            <span class="text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">${passCount} Pass</span>
+            ${warnCount > 0 ? `<span class="text-amber-600 bg-amber-50 px-2 py-0.5 rounded">${warnCount} Warn</span>` : ''}
+            ${failCount > 0 ? `<span class="text-rose-600 bg-rose-50 px-2 py-0.5 rounded">${failCount} Fail</span>` : ''}
+            ${rogueCount > 0 ? `<span class="text-rose-700 bg-rose-100 font-bold px-2 py-0.5 rounded animate-pulse">${rogueCount} ROGUE</span>` : ''}
+          </div>
+        </div>
+
+        ${rogueCount > 0 ? `
+          <div class="bg-rose-50 border border-rose-200 rounded-xl p-3.5 space-y-2">
+            <div class="text-xs font-black text-rose-800 uppercase tracking-wider flex items-center gap-1.5">
+              <svg class="w-4 h-4 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+              Rogue / Unapproved Items Detected (${rogueCount})
+            </div>
+            <p class="text-[11px] text-rose-700">These assets do not match your approved campaign specification:</p>
+            <div class="space-y-1.5 pt-1">
+              ${result.rogueItems.map(r => `
+                <div class="text-xs bg-white p-2 rounded-lg border border-rose-200 flex flex-wrap items-center justify-between gap-2">
+                  <div class="flex items-center space-x-2">
+                    <span class="px-1.5 py-0.5 bg-rose-100 text-rose-800 text-[10px] font-bold rounded">${r.type}</span>
+                    <span class="mono font-semibold text-slate-800">${r.value}</span>
+                  </div>
+                  <span class="text-[11px] text-slate-500">${r.context}</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        ` : ''}
+
+        <!-- Detailed Checks Table -->
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead>
+              <tr class="text-slate-400 border-b border-slate-100 font-semibold uppercase text-[10px] tracking-wider">
+                <th class="py-2 px-1">Check Category</th>
+                <th class="py-2 px-1">Status</th>
+                <th class="py-2 px-1">Finding / Details</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              ${result.checks.map(c => `
+                <tr class="hover:bg-slate-50/50">
+                  <td class="py-2.5 px-1 font-semibold text-slate-700 whitespace-nowrap">${c.category}</td>
+                  <td class="py-2.5 px-1 whitespace-nowrap">
+                    ${c.status === 'PASS' ? '<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">PASS</span>' : ''}
+                    ${c.status === 'FAIL' ? '<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800">FAIL</span>' : ''}
+                    ${c.status === 'WARNING' ? '<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800">WARN</span>' : ''}
+                  </td>
+                  <td class="py-2.5 px-1">
+                    <div class="font-medium text-slate-800">${c.title}</div>
+                    <div class="text-[11px] text-slate-400 mt-0.5">${c.details}</div>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="text-[11px] text-slate-400 pt-2 border-t border-slate-100 flex items-center justify-between">
+          <span>Safe Asset Filter: ${result.ignoredImagesCount} image links safely bypassed.</span>
+          <span>"View in browser" and institutional links approved.</span>
+        </div>
+      `;
+    }
+
+    function computeOverallMetrics() {
+      const total = auditRecords.length;
+      let passed = 0, failed = 0, warnings = 0, rogue = 0;
+
+      auditRecords.forEach(r => {
+        if (r.status === 'PASS') passed++;
+        else if (r.status === 'FAIL') failed++;
+        else if (r.status === 'WARNING') warnings++;
+        if (r.rogueItems) rogue += r.rogueItems.length;
+      });
+
+      updateMetrics(total, passed, warnings, failed, rogue);
+    }
+
+    // CSV Export
+    function exportReportCSV() {
+      if (auditRecords.length === 0) return;
+      let csvContent = "data:text/csv;charset=utf-8,";
+      csvContent += "URL/Identifier,Overall Status,Category,Check Status,Title,Details,Rogue Items Count\n";
+
+      auditRecords.forEach(r => {
+        const idClean = `"${(r.identifier || '').replace(/"/g, '""')}"`;
+        const rCount = r.rogueItems ? r.rogueItems.length : 0;
+        if (r.checks) {
+          r.checks.forEach(c => {
+            const row = [
+              idClean,
+              r.status,
+              `"${c.category}"`,
+              c.status,
+              `"${c.title.replace(/"/g, '""')}"`,
+              `"${c.details.replace(/"/g, '""')}"`,
+              rCount
+            ];
+            csvContent += row.join(",") + "\n";
+          });
+        }
+      });
+
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `studyin_qc_audit_${Date.now()}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    // Initialize Default View
+    window.addEventListener('DOMContentLoaded', () => {
+      loadSelectedPreset();
+      updateUrlCounter();
+    });
+  </script>
+</body>
+</html>
