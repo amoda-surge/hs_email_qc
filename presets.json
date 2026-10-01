@@ -1,0 +1,30 @@
+{
+  "nigeria": {
+    "name": "Nigeria (Lagos)",
+    "email": "lagos@gostudyin.com",
+    "phone": "+234 8109124550",
+    "address": "2 Ahmed Onibudo St, Victoria Island 106104 Lagos , Nigeria",
+    "instagram": "https://www.instagram.com/ng_studyin",
+    "facebook": "https://www.facebook.com/NG.StudyIn",
+    "youtube": "https://www.youtube.com/@nigeria.StudyIn",
+    "tiktok": "https://www.tiktok.com/@nigeria.studyin",
+    "linkedin": "https://www.linkedin.com/company/studyin-global/posts/?feedView=all",
+    "landingPages": "https://gostudyin.com/nigeria/\nhttps://gostudyin.com/nigeria/free-consultation/",
+    "utilityAllowlist": "privacy-policy\nAnti-Bribery\nCode-of-Conduct\nWhistle-Blower\npreferences-center\nhs-sites.com\nhs-analytics.net\nhubspotemail.net\nhsforms.com\nunsubscribe\nview in browser",
+    "blacklist": "Dear  ,,Student ID: Student ID,about:invalid,{{,}},%7B%7B,[First Name],#zCSafez"
+  },
+  "ghana": {
+    "name": "Ghana (Accra)",
+    "email": "accra@gostudyin.com",
+    "phone": "+233 200000000",
+    "address": "Accra, Ghana",
+    "instagram": "https://www.instagram.com/gh_studyin",
+    "facebook": "https://www.facebook.com/GH.StudyIn",
+    "youtube": "https://www.youtube.com/@ghana.StudyIn",
+    "tiktok": "https://www.tiktok.com/@ghana.studyin",
+    "linkedin": "https://www.linkedin.com/company/studyin-global/posts/?feedView=all",
+    "landingPages": "https://gostudyin.com/ghana/\nhttps://gostudyin.com/ghana/free-consultation/",
+    "utilityAllowlist": "privacy-policy\nAnti-Bribery\nCode-of-Conduct\nWhistle-Blower\npreferences-center\nhs-sites.com\nhs-analytics.net\nhubspotemail.net\nhsforms.com\nunsubscribe\nview in browser",
+    "blacklist": "Dear  ,,Student ID: Student ID,about:invalid,{{,}},%7B%7B,[First Name],#zCSafez"
+  }
+}

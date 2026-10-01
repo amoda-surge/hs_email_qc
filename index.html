@@ -349,36 +349,37 @@ view in browser</textarea>
   </div>
 
   <script>
-    const DEFAULT_PROFILES = {
-      nigeria: {
-        name: "Nigeria (Lagos)",
-        email: "lagos@gostudyin.com",
-        phone: "+234 8109124550",
-        address: "2 Ahmed Onibudo St, Victoria Island 106104 Lagos , Nigeria",
-        instagram: "https://www.instagram.com/ng_studyin",
-        facebook: "https://www.facebook.com/NG.StudyIn",
-        youtube: "https://www.youtube.com/@nigeria.StudyIn",
-        tiktok: "https://www.tiktok.com/@nigeria.studyin",
-        linkedin: "https://www.linkedin.com/company/studyin-global/posts/?feedView=all",
-        landingPages: "https://gostudyin.com/nigeria/\nhttps://gostudyin.com/nigeria/free-consultation/",
-        utilityAllowlist: "privacy-policy\nAnti-Bribery\nCode-of-Conduct\nWhistle-Blower\npreferences-center\nhs-sites.com\nhs-analytics.net\nhubspotemail.net\nhsforms.com\nunsubscribe\nview in browser",
-        blacklist: "Dear  ,,Student ID: Student ID,about:invalid,{{,}},%7B%7B,[First Name],#zCSafez"
-      },
-      ghana: {
-        name: "Ghana (Accra)",
-        email: "accra@gostudyin.com",
-        phone: "+233 200000000",
-        address: "Accra, Ghana",
-        instagram: "https://www.instagram.com/gh_studyin",
-        facebook: "https://www.facebook.com/GH.StudyIn",
-        youtube: "https://www.youtube.com/@ghana.StudyIn",
-        tiktok: "https://www.tiktok.com/@ghana.studyin",
-        linkedin: "https://www.linkedin.com/company/studyin-global/posts/?feedView=all",
-        landingPages: "https://gostudyin.com/ghana/\nhttps://gostudyin.com/ghana/free-consultation/",
-        utilityAllowlist: "privacy-policy\nAnti-Bribery\nCode-of-Conduct\nWhistle-Blower\npreferences-center\nhs-sites.com\nhs-analytics.net\nhubspotemail.net\nhsforms.com\nunsubscribe\nview in browser",
-        blacklist: "Dear  ,,Student ID: Student ID,about:invalid,{{,}},%7B%7B,[First Name],#zCSafez"
+    window.qcProfiles = {};
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      try {
+        const res = await fetch('presets.json');
+        if (res.ok) {
+          window.qcProfiles = await res.json();
+          const select = document.getElementById('profileSelect');
+          select.innerHTML = '';
+          for (const key in window.qcProfiles) {
+            const option = document.createElement('option');
+            option.value = key;
+            option.textContent = window.qcProfiles[key].name || key;
+            select.appendChild(option);
+          }
+          const customOpt = document.createElement('option');
+          customOpt.value = 'custom';
+          customOpt.textContent = 'Custom Configuration';
+          select.appendChild(customOpt);
+          
+          if (Object.keys(window.qcProfiles).length > 0) {
+            select.value = Object.keys(window.qcProfiles)[0];
+            loadSelectedProfile();
+          }
+        } else {
+          console.error("Could not load presets.json");
+        }
+      } catch (e) {
+        console.error("Error loading presets.json", e);
       }
-    };
+    });
 
     let activeInputMode = 'urls';
     let auditReports = [];
@@ -442,8 +443,7 @@ view in browser</textarea>
 
     function loadSelectedProfile() {
       const key = document.getElementById('profileSelect').value;
-      const savedProfiles = JSON.parse(localStorage.getItem('qc_profiles') || '{}');
-      const profile = savedProfiles[key] || DEFAULT_PROFILES[key];
+      const profile = window.qcProfiles[key];
 
       if (profile) {
         document.getElementById('targetEmail').value = profile.email || '';
@@ -483,9 +483,15 @@ view in browser</textarea>
         blacklist: document.getElementById('targetBlacklist').value.trim(),
       };
 
-      const savedProfiles = JSON.parse(localStorage.getItem('qc_profiles') || '{}');
-      savedProfiles[profileKey] = profileData;
-      localStorage.setItem('qc_profiles', JSON.stringify(savedProfiles));
+      window.qcProfiles[profileKey] = profileData;
+
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(window.qcProfiles, null, 2));
+      const downloadAnchorNode = document.createElement('a');
+      downloadAnchorNode.setAttribute("href", dataStr);
+      downloadAnchorNode.setAttribute("download", "presets.json");
+      document.body.appendChild(downloadAnchorNode);
+      downloadAnchorNode.click();
+      downloadAnchorNode.remove();
 
       const select = document.getElementById('profileSelect');
       let exists = false;
@@ -496,27 +502,20 @@ view in browser</textarea>
         const option = document.createElement('option');
         option.value = profileKey;
         option.textContent = profileName;
-        select.appendChild(option);
+        select.insertBefore(option, select.lastElementChild); // Insert before Custom Configuration
       }
       select.value = profileKey;
-      showToast(`Profile "${profileName}" saved!`);
+      showToast(`Downloaded updated presets.json! Replace the old file and commit it.`);
     }
 
     function resetDefaults() {
-      const nigeria = DEFAULT_PROFILES.nigeria;
-      document.getElementById('targetEmail').value = nigeria.email;
-      document.getElementById('targetPhone').value = nigeria.phone;
-      document.getElementById('targetAddress').value = nigeria.address;
-      document.getElementById('targetInstagram').value = nigeria.instagram;
-      document.getElementById('targetFacebook').value = nigeria.facebook;
-      document.getElementById('targetYoutube').value = nigeria.youtube;
-      document.getElementById('targetTiktok').value = nigeria.tiktok;
-      document.getElementById('targetLinkedin').value = nigeria.linkedin;
-      document.getElementById('targetLandingPages').value = nigeria.landingPages;
-      document.getElementById('utilityAllowlist').value = nigeria.utilityAllowlist;
-      document.getElementById('targetBlacklist').value = nigeria.blacklist;
-      document.getElementById('profileSelect').value = 'nigeria';
-      showToast("Reset to default Nigeria parameters");
+      const keys = Object.keys(window.qcProfiles);
+      if (keys.length > 0) {
+        const firstKey = keys[0];
+        document.getElementById('profileSelect').value = firstKey;
+        loadSelectedProfile();
+        showToast(`Reset to default ${window.qcProfiles[firstKey].name} parameters`);
+      }
     }
 
     // Helper: Determine if a URL is an image file or media asset
@@ -886,6 +885,12 @@ view in browser</textarea>
         // Check if image URL -> Skip entirely
         if (isImageUrl(rawHref)) {
           totalImagesSkipped++;
+          return;
+        }
+
+        // Skip links with display text "View in browser"
+        const anchorText = (a.textContent || '').trim().toLowerCase();
+        if (anchorText.includes('view in browser')) {
           return;
         }
 
