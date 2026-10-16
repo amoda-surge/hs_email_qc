@@ -26,5 +26,19 @@
     "landingPages": "https://gostudyin.com/ghana/\nhttps://gostudyin.com/ghana/free-consultation/",
     "utilityAllowlist": "privacy-policy\nAnti-Bribery\nCode-of-Conduct\nWhistle-Blower\npreferences-center\nhs-sites.com\nhs-analytics.net\nhubspotemail.net\nhsforms.com\nunsubscribe\nview in browser",
     "blacklist": "Dear  ,,Student ID: Student ID,about:invalid,{{,}},%7B%7B,[First Name],#zCSafez"
+  },
+  "nepal": {
+    "name": "Nepal (Kathmandu)",
+    "email": "nepal@gostudyin.com",
+    "phone": "+97715903980, +97715903981",
+    "address": "Kathmandu, Nepal",
+    "instagram": "https://www.instagram.com/np_studyin",
+    "facebook": "https://www.facebook.com/NP.StudyIn",
+    "youtube": "https://www.youtube.com/@nepal.StudyIn",
+    "tiktok": "https://www.tiktok.com/@nepal.studyin",
+    "linkedin": "https://www.linkedin.com/company/studyin-global/posts/?feedView=all",
+    "landingPages": "https://gostudyin.com/nepal/\nhttps://gostudyin.com/nepal/free-consultation/",
+    "utilityAllowlist": "privacy-policy\nAnti-Bribery\nCode-of-Conduct\nWhistle-Blower\npreferences-center\nhs-sites.com\nhs-analytics.net\nhubspotemail.net\nhsforms.com\nunsubscribe\nview in browser",
+    "blacklist": "Dear  ,,Student ID: Student ID,about:invalid,{{,}},%7B%7B,[First Name],#zCSafez"
   }
 }

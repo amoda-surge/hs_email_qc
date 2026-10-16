@@ -77,6 +77,7 @@
           <select id="profileSelect" class="bg-transparent text-xs font-semibold focus:outline-none pr-3 cursor-pointer text-slate-800 dark:text-slate-200" onchange="loadSelectedProfile()">
             <option value="nigeria">Nigeria (Lagos)</option>
             <option value="ghana">Ghana (Accra)</option>
+            <option value="nepal">Nepal (Kathmandu)</option>
             <option value="custom">Custom Configuration</option>
           </select>
         </div>
@@ -138,7 +139,7 @@
               <span class="absolute inset-y-0 left-0 pl-2.5 flex items-center text-slate-400"><i class="fa-solid fa-phone"></i></span>
               <input type="text" id="targetPhone" class="w-full pl-8 pr-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/50 focus:ring-2 focus:ring-indigo-500 focus:outline-none" value="+234 8109124550">
             </div>
-            <span class="text-[10px] text-slate-400">Checks normalized digits: <code>2348109124550</code> &amp; catches broken dialers.</span>
+            <span class="text-[10px] text-slate-400">Checks normalized digits &amp; catches broken dialers. Multiple numbers can be separated with comma or slash (e.g. <code>+97715903980, +97715903981</code>).</span>
           </div>
 
           <!-- Physical Address Target -->
@@ -577,8 +578,6 @@ view in browser</textarea>
       const doc = parser.parseFromString(htmlString, 'text/html');
 
       const targetEmail = document.getElementById('targetEmail').value.trim().toLowerCase();
-      const targetPhone = document.getElementById('targetPhone').value.trim();
-      const targetPhoneDigits = targetPhone.replace(/\D/g, '');
       const targetAddress = document.getElementById('targetAddress').value.trim().toLowerCase();
       
       const socialsList = [
@@ -724,66 +723,176 @@ view in browser</textarea>
       // ==========================================
       // 2. PHONE VERIFICATION & ROGUE NUMBERS
       // ==========================================
-      if (targetPhone) {
-        const textHasPhone = entireText.replace(/\s+/g, '').includes(targetPhoneDigits);
-        const telLinks = allAnchors
-          .map(a => (a.getAttribute('href') || '').trim())
-          .filter(h => h.toLowerCase().startsWith('tel:'));
-        
-        const hasTelWithNumber = telLinks.some(t => t.replace(/\D/g, '').includes(targetPhoneDigits));
+      if (true) {
+        const targetPhoneRaw = document.getElementById('targetPhone').value.trim();
+        // Support comma, slash, semicolon, pipe, or newline delimited phone numbers
+        const targetPhones = targetPhoneRaw.split(/[,/;\n|]+/).map(p => p.trim()).filter(Boolean);
 
-        // Detect broken phone dialers like about:invalid#zCSafez
-        const brokenPhoneAnchors = allAnchors.filter(a => {
-          const href = (a.getAttribute('href') || '').toLowerCase();
-          const txt = a.textContent.replace(/\D/g, '');
-          const isPhoneText = targetPhoneDigits ? txt.includes(targetPhoneDigits) : false;
-          return (href.includes('about:invalid') || href.includes('#zcsafez')) || 
-                 (isPhoneText && !href.startsWith('tel:'));
-        });
+        if (targetPhones.length > 0) {
+          const telLinks = allAnchors
+            .map(a => (a.getAttribute('href') || '').trim())
+            .filter(h => h.toLowerCase().startsWith('tel:'));
 
-        if (brokenPhoneAnchors.length > 0) {
-          findings.push({
-            category: 'Phone & Dialers',
-            name: 'Phone Dial Link (href & protocol)',
-            status: 'FAIL',
-            details: `CRITICAL PROTOCOL BUG: Phone text is visible, but link is broken ('${brokenPhoneAnchors[0].getAttribute('href')}'). Clicking will NOT dial.`
-          });
-        } else if (hasTelWithNumber) {
-          findings.push({
-            category: 'Phone & Dialers',
-            name: 'Phone Dial Link (href & protocol)',
-            status: 'PASS',
-            details: `Clickable 'tel:' link with valid digits confirmed: ${targetPhone}`
-          });
-        } else if (textHasPhone) {
-          findings.push({
-            category: 'Phone & Dialers',
-            name: 'Phone Dial Link (href & protocol)',
-            status: 'WARN',
-            details: `Phone number is visible in body text ('${targetPhone}'), but not enclosed in a clickable <a href="tel:..."> tag.`
-          });
-        } else {
-          findings.push({
-            category: 'Phone & Dialers',
-            name: 'Phone Dial Link (href & protocol)',
-            status: 'FAIL',
-            details: `Target phone '${targetPhone}' was not detected in page copy or dial links.`
-          });
-        }
+          const whatsappLinks = allAnchors
+            .map(a => (a.getAttribute('href') || '').trim())
+            .filter(h => {
+              const low = h.toLowerCase();
+              return low.includes('wa.me') || low.includes('whatsapp.com');
+            });
 
-        // Rogue Phone Detection
-        const rogueTelLinks = telLinks.filter(t => {
-          const digits = t.replace(/\D/g, '');
-          return digits.length >= 7 && !digits.includes(targetPhoneDigits) && !targetPhoneDigits.includes(digits);
-        });
+          // Helper to check if a phone number appears in a block of text
+          const matchPhoneInText = (text, digits) => {
+            if (!digits || digits.length < 6) return false;
+            // 1. Direct match with whitespace removed
+            const cleanNoSpace = text.replace(/\s+/g, '');
+            if (cleanNoSpace.includes(digits)) return true;
 
-        if (rogueTelLinks.length > 0) {
-          findings.push({
-            category: 'Rogue Asset Sentinel',
-            name: 'Unapproved / Stray Phone Number(s)',
-            status: 'ROGUE',
-            details: `DETECTED UNAPPROVED DIAL LINKS: [ ${rogueTelLinks.join(', ')} ]. Approved phone is '${targetPhone}'.`
+            // 2. Match with punctuation allowed between digits (- . / ( ) space)
+            const punctPattern = digits.split('').join('[\\s\\-\\.\\(\\)\\/]*');
+            try {
+              const reg = new RegExp('(?:\\+?\\s*)?' + punctPattern, 'i');
+              if (reg.test(text)) return true;
+            } catch (e) {}
+
+            // 3. Match core subscriber number (last 7 digits)
+            if (digits.length >= 7) {
+              const coreLocal = digits.slice(-7);
+              const corePattern = coreLocal.split('').join('[\\s\\-\\.\\(\\)\\/]*');
+              try {
+                const regCore = new RegExp(corePattern, 'i');
+                if (regCore.test(text)) return true;
+              } catch (e) {}
+            }
+
+            // 4. Match against stripped non-digits sequence
+            const digitsOnly = text.replace(/\D/g, '');
+            if (digitsOnly.includes(digits)) return true;
+            if (digits.length >= 7 && digitsOnly.includes(digits.slice(-7))) return true;
+
+            return false;
+          };
+
+          // Helper to check if an href (tel: or wa.me) matches a phone number
+          const matchPhoneInLink = (href, digits) => {
+            if (!href || !digits) return false;
+            const linkDigits = href.replace(/\D/g, '');
+            if (!linkDigits || linkDigits.length < 6) return false;
+            if (linkDigits === digits) return true;
+            if (linkDigits.includes(digits) || digits.includes(linkDigits)) return true;
+            if (digits.length >= 7 && linkDigits.length >= 7) {
+              if (digits.slice(-7) === linkDigits.slice(-7)) return true;
+            }
+            return false;
+          };
+
+          // Pre-evaluate all phones to understand template-level presence
+          const phoneEvaluations = targetPhones.map(phone => {
+            const phoneDigits = phone.replace(/\D/g, '');
+            if (!phoneDigits) return null;
+
+            const textHasPhone = matchPhoneInText(entireText, phoneDigits);
+            const hasTelWithNumber = telLinks.some(t => matchPhoneInLink(t, phoneDigits));
+            const hasWhatsAppWithNumber = whatsappLinks.some(w => matchPhoneInLink(w, phoneDigits));
+
+            // Detect broken phone dialers associated specifically with this phone
+            const brokenPhoneAnchors = allAnchors.filter(a => {
+              const href = (a.getAttribute('href') || '').trim().toLowerCase();
+              const txt = a.textContent || '';
+              const anchorHasPhone = matchPhoneInText(txt, phoneDigits) || 
+                                     (href.startsWith('tel:') && matchPhoneInLink(href, phoneDigits));
+
+              if (!anchorHasPhone) return false;
+
+              // Corrupted href tokens generated by broken merge/link wrappers
+              if (href.includes('about:invalid') || href.includes('#zcsafez') || href === '#' || href === '') {
+                return true;
+              }
+              // Anchors displaying phone text without dialable protocol (and not regular web URL)
+              if (!href.startsWith('tel:') && !href.includes('wa.me') && !href.includes('whatsapp.com') && !href.startsWith('http://') && !href.startsWith('https://')) {
+                return true;
+              }
+              return false;
+            });
+
+            return {
+              phone,
+              phoneDigits,
+              textHasPhone,
+              hasTelWithNumber,
+              hasWhatsAppWithNumber,
+              brokenPhoneAnchors
+            };
+          }).filter(Boolean);
+
+          const anyPhoneDetected = phoneEvaluations.some(e => e.hasTelWithNumber || e.hasWhatsAppWithNumber || e.textHasPhone);
+
+          phoneEvaluations.forEach(e => {
+            const { phone, brokenPhoneAnchors, hasTelWithNumber, hasWhatsAppWithNumber, textHasPhone } = e;
+
+            if (brokenPhoneAnchors.length > 0) {
+              findings.push({
+                category: 'Phone & Dialers',
+                name: `Phone Dial Link (${phone})`,
+                status: 'FAIL',
+                details: `CRITICAL PROTOCOL BUG: Phone text is visible, but link is broken ('${brokenPhoneAnchors[0].getAttribute('href')}'). Clicking will NOT dial.`
+              });
+            } else if (hasTelWithNumber) {
+              findings.push({
+                category: 'Phone & Dialers',
+                name: `Phone Dial Link (${phone})`,
+                status: 'PASS',
+                details: `Clickable 'tel:' link with valid digits confirmed: ${phone}`
+              });
+            } else if (hasWhatsAppWithNumber) {
+              findings.push({
+                category: 'Phone & Dialers',
+                name: `Phone Dial Link (${phone})`,
+                status: 'PASS',
+                details: `Clickable WhatsApp direct link confirmed: ${phone}`
+              });
+            } else if (textHasPhone) {
+              findings.push({
+                category: 'Phone & Dialers',
+                name: `Phone Dial Link (${phone})`,
+                status: 'WARN',
+                details: `Phone number is visible in body text ('${phone}'), but not enclosed in a clickable <a href="tel:..."> tag.`
+              });
+            } else if (targetPhones.length > 1 && anyPhoneDetected) {
+              findings.push({
+                category: 'Phone & Dialers',
+                name: `Phone Dial Link (${phone})`,
+                status: 'WARN',
+                details: `Target phone '${phone}' was not detected in this email template (another approved regional phone was verified).`
+              });
+            } else {
+              findings.push({
+                category: 'Phone & Dialers',
+                name: `Phone Dial Link (${phone})`,
+                status: 'FAIL',
+                details: `Target phone '${phone}' was not detected in page copy or dial links.`
+              });
+            }
           });
+
+          // Rogue Phone Detection
+          const rogueTelLinks = telLinks.filter(t => {
+            const digits = t.replace(/\D/g, '');
+            if (digits.length < 7) return false;
+            
+            return !targetPhones.some(phone => {
+              const tpDigits = phone.replace(/\D/g, '');
+              return matchPhoneInLink(t, tpDigits);
+            });
+          });
+
+          if (rogueTelLinks.length > 0) {
+            findings.push({
+              category: 'Rogue Asset Sentinel',
+              name: 'Unapproved / Stray Phone Number(s)',
+              status: 'ROGUE',
+              details: `DETECTED UNAPPROVED DIAL LINKS: [ ${rogueTelLinks.join(', ')} ]. Approved phone(s): '${targetPhones.join(', ')}'.`
+            });
+          }
         }
       }
 
